@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VnollxAI - 找回密码</title>
+    <!-- 引入必要的库 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+
+    <!-- 配置Tailwind自定义样式 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#4b6cb7',
+                        secondary: '#3a56a0',
+                        accent: '#90e0ef',
+                        light: '#f8fafc',
+                        dark: '#263238'
+                    },
+                    fontFamily: {
+                        sans: ['Segoe UI', 'Microsoft YaHei', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+
+    <!-- 自定义工具类 -->
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .bg-gradient-primary {
+                background: linear-gradient(135deg, #4b6cb7, #3a56a0);
+            }
+            .bg-gradient-accent {
+                background: linear-gradient(135deg, #90e0ef, #00b4d8);
+            }
+            .text-shadow {
+                text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+            .input-focus {
+                @apply focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none;
+            }
+            .btn-hover {
+                @apply hover:shadow-lg hover:shadow-primary/20 hover:-translate-y-0.5 transition-all duration-300;
+            }
+        }
+    </style>
+
+    <style>
+        /* 基础动画效果 */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+            20%, 40%, 60%, 80% { transform: translateX(5px); }
+        }
+
+        /* 自定义滚动条 */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* 加载动画 */
+        .loading-dot {
+            width: 8px;
+            height: 8px;
+            background-color: #4b6cb7;
+            border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+
+        .loading-dot:nth-child(1) { animation-delay: -0.32s; }
+        .loading-dot:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-f0f9ff to-a1dbff min-h-screen flex items-center justify-center p-4 font-sans">
+<div class="max-w-md w-full animate-fadeIn">
+    <!-- 找回密码卡片 -->
+    <div class="bg-white rounded-2xl shadow-2xl overflow-hidden border border-gray-100">
+        <!-- 顶部渐变区域 -->
+        <div class="bg-gradient-accent p-6 text-white">
+            <h1 class="text-[clamp(1.8rem,4vw,2.5rem)] font-bold text-shadow mb-2">VnollxAI</h1>
+            <p class="text-white/80 text-lg">重置您的账号密码</p>
+        </div>
+
+        <!-- 找回密码表单 -->
+        <div class="p-8">
+            <form id="resetPasswordForm" class="space-y-6">
+                <!-- 邮箱输入 -->
+                <div class="space-y-2">
+                    <label for="email" class="block text-sm font-medium text-gray-700">邮箱地址</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+                            <i class="fa fa-envelope"></i>
+                        </span>
+                        <input type="email" id="email" name="email"
+                               class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg input-focus transition-all"
+                               placeholder="请输入注册时使用的邮箱" required>
+                    </div>
+                </div>
+
+                <!-- 验证码输入 -->
+                <div class="space-y-2">
+                    <label for="verificationCode" class="block text-sm font-medium text-gray-700">验证码</label>
+                    <div class="flex space-x-3">
+                        <div class="relative flex-1">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+                                <i class="fa fa-key"></i>
+                            </span>
+                            <input type="text" id="verificationCode" name="verificationCode"
+                                   class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg input-focus transition-all"
+                                   placeholder="请输入验证码" required>
+                        </div>
+                        <button type="button" id="getVerificationCode"
+                                class="px-4 py-3 bg-primary text-white rounded-lg hover:bg-secondary transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed">
+                            获取验证码
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 新密码输入 -->
+                <div class="space-y-2">
+                    <label for="newPassword" class="block text-sm font-medium text-gray-700">新密码</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+                            <i class="fa fa-lock"></i>
+                        </span>
+                        <input type="password" id="newPassword" name="newPassword"
+                               class="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg input-focus transition-all"
+                               placeholder="请设置新密码" required>
+                        <button type="button" id="toggleNewPassword" class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600">
+                            <i class="fa fa-eye-slash"></i>
+                        </button>
+                    </div>
+                    <p class="text-xs text-gray-500">密码长度至少6位</p>
+                </div>
+
+                <!-- 确认新密码输入 -->
+                <div class="space-y-2">
+                    <label for="confirmNewPassword" class="block text-sm font-medium text-gray-700">确认新密码</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+                            <i class="fa fa-lock"></i>
+                        </span>
+                        <input type="password" id="confirmNewPassword" name="confirmNewPassword"
+                               class="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg input-focus transition-all"
+                               placeholder="请再次输入新密码" required>
+                        <button type="button" id="toggleConfirmNewPassword" class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600">
+                            <i class="fa fa-eye-slash"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 重置密码按钮 -->
+                <button type="submit" id="resetPasswordBtn"
+                        class="w-full bg-gradient-primary text-white py-3 px-4 rounded-lg font-medium text-lg btn-hover shadow-md">
+                    <span id="btnText">重置密码</span>
+                    <span id="btnLoader" class="hidden items-center justify-center">
+                        <span class="loading-dot mr-2"></span>
+                        <span class="loading-dot mr-2"></span>
+                        <span class="loading-dot"></span>
+                    </span>
+                </button>
+            </form>
+
+            <!-- 分隔线 -->
+            <div class="relative my-6">
+                <div class="absolute inset-0 flex items-center">
+                    <div class="w-full border-t border-gray-300"></div>
+                </div>
+                <div class="relative flex justify-center text-sm">
+                    <span class="px-3 bg-white text-gray-500">想起密码了?</span>
+                </div>
+            </div>
+
+            <!-- 返回登录 -->
+            <div class="text-center text-sm text-gray-600 mb-4">
+                <a href="/login.html" class="text-primary hover:text-secondary font-medium transition-colors">返回登录</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 底部状态信息 -->
+    <div class="mt-6 text-center text-xs text-gray-500">
+        <p>© 2025 VnollxAI. 保留所有权利.</p>
+    </div>
+</div>
+
+<!-- 通知组件 -->
+<div id="notification" class="fixed top-4 right-4 max-w-sm p-4 rounded-lg shadow-lg transform translate-x-full transition-transform duration-300 z-50 flex items-center">
+    <i id="notificationIcon" class="fa fa-check-circle text-xl mr-3"></i>
+    <div>
+        <h3 id="notificationTitle" class="font-medium">操作成功</h3>
+        <p id="notificationMessage" class="text-sm text-gray-500">您的操作已成功完成</p>
+    </div>
+</div>
+
+<script>
+    // DOM元素获取
+    const resetPasswordForm = document.getElementById('resetPasswordForm');
+    const resetPasswordBtn = document.getElementById('resetPasswordBtn');
+    const btnText = document.getElementById('btnText');
+    const btnLoader = document.getElementById('btnLoader');
+    const newPasswordInput = document.getElementById('newPassword');
+    const confirmNewPasswordInput = document.getElementById('confirmNewPassword');
+    const toggleNewPassword = document.getElementById('toggleNewPassword');
+    const toggleConfirmNewPassword = document.getElementById('toggleConfirmNewPassword');
+    const notification = document.getElementById('notification');
+    const notificationIcon = document.getElementById('notificationIcon');
+    const notificationTitle = document.getElementById('notificationTitle');
+    const notificationMessage = document.getElementById('notificationMessage');
+    const getVerificationCodeBtn = document.getElementById('getVerificationCode');
+    const verificationCodeInput = document.getElementById('verificationCode');
+    const emailInput = document.getElementById('email');
+
+    // 存储验证码相关状态
+    let verificationCodeTimer = null;
+    let remainingSeconds = 60;
+
+    // 密码显示/隐藏切换
+    function setupPasswordToggle(button, input) {
+        button.addEventListener('click', function() {
+            const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
+            input.setAttribute('type', type);
+
+            // 切换图标
+            this.querySelector('i').classList.toggle('fa-eye-slash');
+            this.querySelector('i').classList.toggle('fa-eye');
+        });
+    }
+
+    setupPasswordToggle(toggleNewPassword, newPasswordInput);
+    setupPasswordToggle(toggleConfirmNewPassword, confirmNewPasswordInput);
+
+    // 验证码获取功能
+    function setupVerificationCode() {
+        getVerificationCodeBtn.addEventListener('click', function() {
+            const email = emailInput.value.trim();
+
+            if (!email) {
+                showNotification('错误', '请先输入邮箱地址', 'error');
+                emailInput.classList.add('border-red-500');
+                setTimeout(() => {
+                    emailInput.classList.remove('border-red-500');
+                }, 2000);
+                return;
+            }
+
+            // 验证邮箱格式
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                showNotification('错误', '请输入有效的邮箱地址', 'error');
+                emailInput.classList.add('border-red-500');
+                setTimeout(() => {
+                    emailInput.classList.remove('border-red-500');
+                }, 2000);
+                return;
+            }
+
+            // 显示加载状态
+            this.disabled = true;
+            this.innerHTML = '<span class="loading-dot mr-2"></span>发送中...';
+
+            // 创建FormData并发送请求
+            const formData = new FormData();
+            formData.append('email', email);
+            formData.append('option',"forget");
+
+            // 模拟API请求
+            fetch('/email/send', {
+                method: 'POST',
+                body: formData
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.code === 200) {
+                        showNotification('成功', '验证码已发送到您的邮箱', 'success');
+                        startVerificationCodeTimer();
+                    } else {
+                        showNotification('错误', data.msg || '获取验证码失败，请稍后再试', 'error');
+                        // 恢复按钮状态
+                        getVerificationCodeBtn.disabled = false;
+                        getVerificationCodeBtn.innerHTML = '获取验证码';
+                    }
+                })
+                .catch(error => {
+                    showNotification('错误', '网络错误，请稍后再试', 'error');
+                    // 恢复按钮状态
+                    getVerificationCodeBtn.disabled = false;
+                    getVerificationCodeBtn.innerHTML = '获取验证码';
+                });
+        });
+    }
+
+    // 验证码倒计时
+    function startVerificationCodeTimer() {
+        remainingSeconds = 60;
+        getVerificationCodeBtn.disabled = true;
+
+        verificationCodeTimer = setInterval(() => {
+            remainingSeconds--;
+            getVerificationCodeBtn.innerHTML = `${remainingSeconds}秒后重新获取`;
+
+            if (remainingSeconds <= 0) {
+                clearInterval(verificationCodeTimer);
+                getVerificationCodeBtn.disabled = false;
+                getVerificationCodeBtn.innerHTML = '获取验证码';
+            }
+        }, 1000);
+    }
+
+    // 清除验证码倒计时
+    function clearVerificationCodeTimer() {
+        if (verificationCodeTimer) {
+            clearInterval(verificationCodeTimer);
+            verificationCodeTimer = null;
+        }
+    }
+
+    // 表单提交处理
+    resetPasswordForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        // 获取表单值
+        const email = document.getElementById('email').value.trim();
+        const verificationCode = verificationCodeInput.value.trim();
+        const newPassword = newPasswordInput.value.trim();
+        const confirmNewPassword = confirmNewPasswordInput.value.trim();
+
+        // 表单验证
+        let isFormValid = true;
+
+        if (!email) {
+            showNotification('错误', '请输入邮箱地址', 'error');
+            document.getElementById('email').classList.add('border-red-500');
+            setTimeout(() => {
+                document.getElementById('email').classList.remove('border-red-500');
+            }, 2000);
+            isFormValid = false;
+        } else {
+            // 简单邮箱格式验证
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                showNotification('错误', '请输入有效的邮箱地址', 'error');
+                document.getElementById('email').classList.add('border-red-500');
+                setTimeout(() => {
+                    document.getElementById('email').classList.remove('border-red-500');
+                }, 2000);
+                isFormValid = false;
+            }
+        }
+
+        if (!verificationCode) {
+            showNotification('错误', '请输入验证码', 'error');
+            verificationCodeInput.classList.add('border-red-500');
+            setTimeout(() => {
+                verificationCodeInput.classList.remove('border-red-500');
+            }, 2000);
+            isFormValid = false;
+        }
+
+        if (!newPassword) {
+            showNotification('错误', '请设置新密码', 'error');
+            newPasswordInput.classList.add('border-red-500');
+            setTimeout(() => {
+                newPasswordInput.classList.remove('border-red-500');
+            }, 2000);
+            isFormValid = false;
+        } else if (newPassword.length < 6) {
+            showNotification('错误', '密码长度至少需要6位', 'error');
+            newPasswordInput.classList.add('border-red-500');
+            setTimeout(() => {
+                newPasswordInput.classList.remove('border-red-500');
+            }, 2000);
+            isFormValid = false;
+        }
+
+        if (!confirmNewPassword) {
+            showNotification('错误', '请确认新密码', 'error');
+            confirmNewPasswordInput.classList.add('border-red-500');
+            setTimeout(() => {
+                confirmNewPasswordInput.classList.remove('border-red-500');
+            }, 2000);
+            isFormValid = false;
+        } else if (newPassword !== confirmNewPassword) {
+            showNotification('错误', '两次输入的新密码不一致', 'error');
+            confirmNewPasswordInput.classList.add('border-red-500');
+            setTimeout(() => {
+                confirmNewPasswordInput.classList.remove('border-red-500');
+            }, 2000);
+            isFormValid = false;
+        }
+
+        if (!isFormValid) return;
+
+        // 显示加载状态
+        btnText.classList.add('hidden');
+        btnLoader.classList.remove('hidden');
+        resetPasswordBtn.disabled = true;
+
+        // 创建FormData并发送请求
+        const formData = new FormData();
+        formData.append('email', email);
+        formData.append('newPassword', newPassword);
+        formData.append('captcha', verificationCode);
+
+        // 模拟API请求
+        setTimeout(() => {
+            fetch('/user/update/password', {
+                method: 'POST',
+                body: formData
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.code === 200) {
+                        showNotification('成功', '密码重置成功，正在跳转至登录页面...', 'success');
+                        // 跳转至登录页
+                        setTimeout(() => {
+                            window.location.href = 'login.html'; // 替换为登录页URL
+                        }, 1500);
+                    } else {
+                        showNotification('错误', data.msg || '密码重置失败，请稍后再试', 'error');
+                    }
+                })
+                .catch(error => {
+                    showNotification('错误', '网络错误，请稍后再试', 'error');
+                })
+                .finally(() => {
+                    // 恢复按钮状态
+                    btnText.classList.remove('hidden');
+                    btnLoader.classList.add('hidden');
+                    resetPasswordBtn.disabled = false;
+                });
+        }, 1500);
+    });
+
+    // 显示通知
+    function showNotification(title, message, type = 'success') {
+        notificationTitle.textContent = title;
+        notificationMessage.textContent = message;
+
+        // 设置通知类型样式
+        if (type === 'success') {
+            notification.classList.remove('bg-red-500', 'text-white');
+            notification.classList.add('bg-green-500', 'text-white');
+            notificationIcon.className = 'fa fa-check-circle text-xl mr-3';
+        } else if (type === 'error') {
+            notification.classList.remove('bg-green-500', 'text-white');
+            notification.classList.add('bg-red-500', 'text-white');
+            notificationIcon.className = 'fa fa-exclamation-circle text-xl mr-3';
+        }
+
+        // 显示通知
+        notification.classList.remove('translate-x-full');
+
+        // 3秒后隐藏通知
+        setTimeout(() => {
+            notification.classList.add('translate-x-full');
+        }, 3000);
+    }
+
+    // 表单输入时移除错误状态
+    document.querySelectorAll('#resetPasswordForm input').forEach(input => {
+        input.addEventListener('input', function() {
+            if (this.classList.contains('border-red-500')) {
+                this.classList.remove('border-red-500');
+            }
+        });
+    });
+
+    // 页面加载完成后初始化验证码功能
+    document.addEventListener('DOMContentLoaded', function() {
+        setupVerificationCode();
+    });
+
+    // 页面卸载时清除定时器
+    window.addEventListener('beforeunload', function() {
+        clearVerificationCodeTimer();
+    });
+</script>
+</body>
+</html>
